@@ -99,7 +99,8 @@ instagram-cli                                  # display title art
 instagram-cli --help                           # view available commands
 
 # Authentication
-instagram-cli auth login --username            # login with username and password
+instagram-cli auth login --username            # open interactive username/password login form
+instagram-cli auth login --username <username> <password> # one-line login
 instagram-cli auth logout                      # logout and removes session
 instagram-cli auth switch <username>           # switch to another saved account
 instagram-cli auth whoami                      # display current default user

@@ -2,7 +2,7 @@ import React, {useState, useEffect} from 'react';
 import {Box, Text} from 'ink';
 import {Alert, TextInput} from '@inkjs/ui';
 import zod from 'zod';
-import {option} from 'pastel';
+import {argument, option} from 'pastel';
 import {type AccountRepositoryLoginErrorResponseTwoFactorInfo} from 'instagram-private-api';
 import LoginForm from '../../ui/components/login-form.js';
 import {InstagramClient} from '../../client.js';
@@ -10,6 +10,27 @@ import {ConfigManager} from '../../config.js';
 import {createContextualLogger} from '../../utils/logger.js';
 
 const logger = createContextualLogger('LoginCommand');
+
+export const args = zod.tuple([
+	zod
+		.string()
+		.optional()
+		.describe(
+			argument({
+				name: 'username',
+				description: 'Instagram username (for one-line login)',
+			}),
+		),
+	zod
+		.string()
+		.optional()
+		.describe(
+			argument({
+				name: 'password',
+				description: 'Instagram password (for one-line login)',
+			}),
+		),
+]);
 
 export const options = zod.object({
 	username: zod
@@ -24,10 +45,11 @@ export const options = zod.object({
 });
 
 type Properties = {
+	readonly args: zod.infer<typeof args>;
 	readonly options: zod.infer<typeof options>;
 };
 
-export default function Login({options}: Properties) {
+export default function Login({args, options}: Properties) {
 	const [client, setClient] = useState<InstagramClient | undefined>(undefined);
 	const [message, setMessage] = useState<string | undefined>('Initializing...');
 	const [mode, setMode] = useState<
@@ -140,7 +162,68 @@ export default function Login({options}: Properties) {
 
 	useEffect(() => {
 		const run = async () => {
-			// If the user provided a username, we assume they want to log in with username/password
+			const [cliUsername, cliPassword] = args;
+
+			if (cliUsername && !cliPassword) {
+				setMessage(
+					'Missing password. Usage: instagram-cli auth login --username <USERNAME> <PASSWORD>',
+				);
+				setMode('error');
+				return;
+			}
+
+			if (!cliUsername && cliPassword) {
+				setMessage(
+					'Missing username. Usage: instagram-cli auth login --username <USERNAME> <PASSWORD>',
+				);
+				setMode('error');
+				return;
+			}
+
+			if (cliUsername && cliPassword) {
+				const loginClient = new InstagramClient();
+				setClient(loginClient);
+				setMessage(`Logging in as @${cliUsername}...`);
+				try {
+					const result = await loginClient.login(cliUsername, cliPassword, {
+						initializeRealtime: false,
+					});
+					if (result.success) {
+						setMessage(`Logged in as @${result.username}`);
+						setMode('success');
+					} else if (result.twoFactorInfo) {
+						setTwoFactorInfo(result.twoFactorInfo);
+						const {totp_two_factor_on} = result.twoFactorInfo;
+						const verificationMethod = totp_two_factor_on ? 'TOTP' : 'SMS';
+						setMessage(`Enter code received via ${verificationMethod}`);
+						setMode('2fa');
+					} else if (result.checkpointError) {
+						setMessage('Challenge required. Requesting code...');
+						await loginClient.startChallenge();
+						setMessage('A code has been sent to you. Please enter it below.');
+						setMode('challenge');
+					} else if (result.badPassword) {
+						setMessage(
+							"You have entered an incorrect username or password. If you're sure your credentials are correct, this might be caused by Instagram's IP blocking system, try again in a few hours.",
+						);
+						setMode('error');
+					} else {
+						setMessage(`Login failed: ${result.error}`);
+						setMode('error');
+					}
+				} catch (error) {
+					setMessage(
+						`Login error: ${
+							error instanceof Error ? error.message : String(error)
+						}`,
+					);
+					setMode('error');
+				}
+
+				return;
+			}
+
+			// If the user provided --username without credentials, open the username/password form
 			if (options.username) {
 				setClient(new InstagramClient());
 				setMode('form');
@@ -188,7 +271,7 @@ export default function Login({options}: Properties) {
 		};
 
 		void run();
-	}, [options.username]);
+	}, [args, options.username]);
 
 	if (mode === 'error') {
 		return (
