@@ -118,6 +118,7 @@ instagram-cli config edit                      # open config file in editor
 
 # LLM-friendly machine output (JSON envelopes)
 instagram-cli llm threads --limit 20 --fields id,title,unread,lastActivity
+instagram-cli llm search "janaki" --mode auto --limit 20 --fields id,title,isGroup,participants,score
 instagram-cli llm messages <threadId> --limit 30 --max-chars 400 --max-tokens-est 2000
 instagram-cli llm send <threadId> "hello" --idempotency-key run-123
 instagram-cli llm notify --limit 20

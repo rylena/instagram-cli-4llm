@@ -65,10 +65,10 @@ export default function LlmNotify({args, options}: Properties) {
 				]
 					.slice(0, options.limit)
 					.map(story => {
-						const s = story as {
+						const s = story as unknown as {
 							pk?: string | number;
 							id?: string | number;
-							story_type?: string;
+							story_type?: string | number;
 							args?: {rich_text?: string; timestamp?: number};
 						};
 						const richText = s.args?.rich_text ?? '';
