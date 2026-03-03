@@ -393,9 +393,10 @@ export class InstagramClient extends EventEmitter {
 				const currentUser = await this.ig.account.currentUser();
 				this.username = currentUser.username;
 			} catch (error) {
+				const errorMessage =
+					error instanceof Error ? error.message : String(error);
 				this.logger.warn(
-					'Failed to fetch current user during session login, continuing with stored username',
-					error,
+					`Failed to fetch current user during session login, continuing with stored username: ${errorMessage}`,
 				);
 				this.username = originalUsername;
 			}
