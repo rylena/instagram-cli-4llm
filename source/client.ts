@@ -389,8 +389,16 @@ export class InstagramClient extends EventEmitter {
 			// Preserve the original username used to load the session (for filesystem consistency)
 			const originalUsername = this.username;
 
-			const currentUser = await this.ig.account.currentUser();
-			this.username = currentUser.username;
+			try {
+				const currentUser = await this.ig.account.currentUser();
+				this.username = currentUser.username;
+			} catch (error) {
+				this.logger.warn(
+					'Failed to fetch current user during session login, continuing with stored username',
+					error,
+				);
+				this.username = originalUsername;
+			}
 
 			await this.saveSessionState();
 			// Use the original username to maintain consistency with session file paths
