@@ -20,7 +20,13 @@ if (values.production) {
 }
 
 async function runBuild() {
-	const entryPoints = ['source/cli.ts', 'source/commands/**/*.tsx'];
+	const entryPoints = [
+		'source/cli.ts',
+		'source/client.ts',
+		'source/config.ts',
+		'source/session.ts',
+		'source/commands/**/*.tsx',
+	];
 
 	if (values.watch) {
 		entryPoints.push('source/mocks/**/*.ts');
